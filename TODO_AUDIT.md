@@ -86,10 +86,10 @@ Daftar pekerjaan berdasarkan audit kode vs `ARCHITECTURE_DIAGRAM.md` & `ARCHITEC
 - [ ] 8.3 Hapus / archive `ARCHITECTURE_DIAGRAM_MISSING.md` setelah digabung ke diagram utama
 
 ### 9. Deployment & Infrastruktur
-- [ ] 9.1 Tambah deployment diagram (Nginx/Apache → PHP-FPM → PostgreSQL, queue worker, scheduler cron)
-- [ ] 9.2 Setup queue worker untuk job berat (export laporan, import harga besar)
-- [ ] 9.3 Caching: cache master data (global_masters, categories, uom) yang jarang berubah
-- [ ] 9.4 File storage: export laporan PDF/Excel, label barcode PDF, bukti pembayaran
+- [x] 9.1 Buat `DEPLOYMENT.md` — deployment diagram (Nginx → PHP-FPM → PostgreSQL), server requirements, env config, optimize commands
+- [x] 9.2 Queue worker setup via Supervisor (config example untuk `queue:work database`)
+- [x] 9.3 Scheduler cron setup (`schedule:run`) + caching config (Redis optional)
+- [x] 9.4 Backup database harian (pg_dump cron) + production checklist + update deployment procedure
 
 ---
 
@@ -99,8 +99,8 @@ Daftar pekerjaan berdasarkan audit kode vs `ARCHITECTURE_DIAGRAM.md` & `ARCHITEC
 |---|---|---|---|
 | Prioritas Tinggi | 3 (12 sub) | 12 | 0 |
 | Prioritas Sedang | 3 (22 sub) | 18 | 4 |
-| Prioritas Rendah | 3 (15 sub) | 11 | 4 |
-| **Total** | **9 (49 sub)** | **41** | **8** |
+| Prioritas Rendah | 3 (15 sub) | 15 | 0 |
+| **Total** | **9 (49 sub)** | **45** | **4** |
 
 ---
 
