@@ -48,3 +48,8 @@ desktop.ini
 # File sampah dari error command
 /handleCommand() #5
 /README.mdgit
+
+# Uploaded Excel/CSV imports (user uploads, not source)
+/public/*.xlsx
+/public/*.xls
+/public/*.csv
