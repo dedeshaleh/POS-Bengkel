@@ -32,6 +32,12 @@ Route::middleware(['auth', 'menu.permission'])->group(function () {
     Route::get('/api/alerts', [DashboardController::class, 'alerts'])->name('api.alerts');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
+    // Test-only route for RBAC middleware tests (returns 200 OK)
+    if (app()->environment('testing')) {
+        Route::get('/test-rbac', fn () => response('OK'))->name('test.rbac');
+        Route::post('/test-rbac', fn () => response('OK'));
+    }
+
     Route::get('/master-data', [MasterDataController::class, 'index'])->name('master-data.index');
     Route::post('/master-data/products', [MasterDataController::class, 'storeProduct'])->name('products.store');
     Route::post('/master-data/customers', [MasterDataController::class, 'storeCustomer'])->name('customers.store');

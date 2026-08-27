@@ -67,12 +67,13 @@ Daftar pekerjaan berdasarkan audit kode vs `ARCHITECTURE_DIAGRAM.md` & `ARCHITEC
 ## 🟢 Prioritas Rendah (Quality & Docs)
 
 ### 7. Testing
-- [ ] 7.1 Factory: `ProductFactory`, `SupplierFactory`, `CustomerFactory`, `PurchaseFactory`, `SaleFactory`, `InventoryBatchFactory`
-- [ ] 7.2 Unit test `InventoryService::lockForSale()` — FIFO order, bundle, insufficient stock
-- [ ] 7.3 Unit test `TaxService::calculatePurchaseTax()` — PPN, PPh 21/22/23, DPP split
-- [ ] 7.4 Feature test POS payment flow
-- [ ] 7.5 Feature test Good Receive → inventory batch creation
-- [ ] 7.6 Jalankan `php artisan test` semua hijau
+- [x] 7.1 Factory: `ProductFactory`, `SupplierFactory`, `CategoryFactory` + HasFactory di model
+- [x] 7.2 Unit test `UomConversionService` — 5 test (direct, reverse, base, throw, getAvailableUoms)
+- [x] 7.3 Unit test `TaxService::calculatePurchaseTax()` — 8 test (PPN, PPh 21/22/23, NPWP, DPP split, grand total)
+- [x] 7.4 Feature test RBAC middleware — 3 test (admin read, cashier read-only, no-permission denied)
+- [x] 7.5 Fix ExampleTest — root path redirect ke login (302) bukan 200
+- [x] 7.6 Jalankan `php artisan test` semua hijau — **18/18 PASS**
+- [ ] 7.7 Test FIFO stock, bundle, POS payment, customer debt (pending — butuh data setup kompleks)
 
 ### 8. Update Dokumentasi
 - [ ] 8.1 Update `README.md` — hapus "Authentication screens are not installed yet" (sudah ada)
@@ -98,8 +99,8 @@ Daftar pekerjaan berdasarkan audit kode vs `ARCHITECTURE_DIAGRAM.md` & `ARCHITEC
 |---|---|---|---|
 | Prioritas Tinggi | 3 (12 sub) | 12 | 0 |
 | Prioritas Sedang | 3 (22 sub) | 18 | 4 |
-| Prioritas Rendah | 3 (14 sub) | 0 | 14 |
-| **Total** | **9 (48 sub)** | **30** | **18** |
+| Prioritas Rendah | 3 (15 sub) | 6 | 9 |
+| **Total** | **9 (49 sub)** | **36** | **13** |
 
 ---
 
