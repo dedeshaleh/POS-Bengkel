@@ -12,6 +12,7 @@ use App\Models\SaleItem;
 use App\Models\Voucher;
 use App\Models\VoucherUsage;
 use App\Services\PriceCatalogService;
+use App\Services\UomConversionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -33,6 +34,21 @@ class PosModuleController extends Controller
         }
 
         return view('pos.open-cashier', compact('drafts', 'editingDraft'));
+    }
+
+    /**
+     * Return available UOM options for a product (base UOM + conversions).
+     * Used by POS UI to render a UOM dropdown per cart line.
+     */
+    public function lookupUoms(Product $product)
+    {
+        $uoms = app(UomConversionService::class)->getAvailableUoms($product->id);
+
+        return response()->json([
+            'product_id' => $product->id,
+            'base_uom' => $product->base_uom_code,
+            'uoms' => $uoms,
+        ]);
     }
 
     public function lookupProducts(Request $request)
@@ -75,6 +91,8 @@ class PosModuleController extends Controller
             'product_id.*' => ['required', 'exists:products,id'],
             'qty' => ['required', 'array'],
             'qty.*' => ['required', 'integer', 'min:1'],
+            'uom_code' => ['nullable', 'array'],
+            'uom_code.*' => ['nullable', 'string', 'max:50'],
             'selling_price' => ['required', 'array'],
             'selling_price.*' => ['required', 'numeric', 'min:0'],
             'discount_amount' => ['nullable', 'array'],
@@ -199,6 +217,17 @@ class PosModuleController extends Controller
                     $sellingPrice = (float) $data['selling_price'][$index];
                     $itemDiscount = (float) ($data['discount_amount'][$index] ?? 0);
                     $itemSubtotal = $lineSubtotals[$index];
+
+                    // UOM auto-conversion: if a non-base UOM is specified,
+                    // convert the sold qty to base UOM before locking stock.
+                    $uomCode = $data['uom_code'][$index] ?? null;
+                    if ($uomCode && strtoupper($uomCode) !== strtoupper($product->base_uom_code)) {
+                        $qty = app(UomConversionService::class)->convertToBaseUom(
+                            $product->id,
+                            $uomCode,
+                            (float) $qty,
+                        );
+                    }
 
                     // Lock FIFO batches - aggregate across multiple batches if needed
                     $batches = InventoryBatch::where('product_id', $productId)

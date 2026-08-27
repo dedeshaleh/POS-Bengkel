@@ -120,6 +120,7 @@ Route::middleware(['auth', 'menu.permission'])->group(function () {
     Route::prefix('modules/pos')->name('modules.pos.')->group(function () {
         Route::get('/open-cashier', [\App\Http\Controllers\PosModuleController::class, 'openCashier'])->name('open-cashier');
         Route::get('/lookup-products', [\App\Http\Controllers\PosModuleController::class, 'lookupProducts'])->name('lookup-products');
+        Route::get('/lookup-uoms/{product}', [\App\Http\Controllers\PosModuleController::class, 'lookupUoms'])->name('lookup-uoms');
         Route::get('/lookup-customers', [\App\Http\Controllers\PosModuleController::class, 'lookupCustomers'])->name('lookup-customers');
         Route::post('/save-draft', [\App\Http\Controllers\PosModuleController::class, 'saveDraft'])->name('save-draft');
         Route::get('/payment/{sale}', [\App\Http\Controllers\PosModuleController::class, 'showPayment'])->name('payment');

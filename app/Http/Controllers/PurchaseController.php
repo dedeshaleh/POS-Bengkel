@@ -11,6 +11,7 @@ use App\Models\Warehouse;
 use App\Services\InventoryService;
 use App\Services\PriceCatalogService;
 use App\Services\TaxService;
+use App\Services\UomConversionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -28,7 +29,7 @@ class PurchaseController extends Controller
         return view('purchases.create');
     }
 
-    public function store(Request $request, InventoryService $inventory, TaxService $taxService)
+    public function store(Request $request, InventoryService $inventory, TaxService $taxService, UomConversionService $uomService)
     {
         $data = $request->validate([
             'invoice_number' => ['required', 'max:100', 'unique:purchases,invoice_number'],
@@ -43,8 +44,8 @@ class PurchaseController extends Controller
             'purchased_uom_code.*' => ['required', 'max:50'],
             'purchased_qty' => ['required', 'array'],
             'purchased_qty.*' => ['required', 'integer', 'min:1'],
-            'qty_in_base_uom' => ['required', 'array'],
-            'qty_in_base_uom.*' => ['required', 'integer', 'min:1'],
+            'qty_in_base_uom' => ['nullable', 'array'],
+            'qty_in_base_uom.*' => ['nullable', 'integer', 'min:1'],
             'buy_price_per_purchased_uom' => ['required', 'array'],
             'buy_price_per_purchased_uom.*' => ['required', 'numeric', 'min:0'],
             'item_discount_type' => ['nullable', 'array'],
@@ -63,11 +64,26 @@ class PurchaseController extends Controller
             abort_if($mappedCount !== count(array_unique($data['product_id'])), 422, 'Ada item yang belum dimapping ke supplier ini.');
         }
 
-        DB::transaction(function () use ($data, $inventory, $taxService) {
+        DB::transaction(function () use ($data, $inventory, $taxService, $uomService) {
             $supplier = ! empty($data['supplier_id']) ? Supplier::find($data['supplier_id']) : null;
             $lineTotals = collect($data['product_id'])
                 ->map(fn ($productId, $index) => $this->calculateLineTotals($data, $index));
             $products = Product::whereIn('id', $data['product_id'])->get()->keyBy('id');
+
+            // Auto-calculate qty_in_base_uom from purchased_uom_code + purchased_qty
+            // when not provided by the client (UOM auto-conversion).
+            $baseQtys = [];
+            foreach ($data['product_id'] as $index => $productId) {
+                $manual = $data['qty_in_base_uom'][$index] ?? null;
+                $baseQtys[$index] = $manual
+                    ? (int) $manual
+                    : $uomService->convertToBaseUom(
+                        (int) $productId,
+                        $data['purchased_uom_code'][$index],
+                        (float) $data['purchased_qty'][$index],
+                    );
+            }
+
             $tax = $taxService->calculatePurchaseTax(
                 $supplier,
                 $lineTotals,
@@ -103,7 +119,7 @@ class PurchaseController extends Controller
                     'purchased_uom_code' => $data['purchased_uom_code'][$index],
                     'purchased_qty' => $data['purchased_qty'][$index],
                     'received_qty' => $data['status'] === 'closed' ? $data['purchased_qty'][$index] : 0,
-                    'qty_in_base_uom' => $data['qty_in_base_uom'][$index],
+                    'qty_in_base_uom' => $baseQtys[$index],
                     'buy_price_per_purchased_uom' => $data['buy_price_per_purchased_uom'][$index],
                     'discount_type' => $lineTotals['discount_type'],
                     'discount_value' => $lineTotals['discount_value'],
@@ -114,7 +130,7 @@ class PurchaseController extends Controller
 
                 // Increment on_order_qty only when PO becomes active (on_order or closed)
                 if (in_array($data['status'], ['on_order', 'closed'])) {
-                    Product::where('id', $productId)->increment('on_order_qty', (int) $data['qty_in_base_uom'][$index]);
+                    Product::where('id', $productId)->increment('on_order_qty', $baseQtys[$index]);
                 }
 
                 if ($data['status'] === 'closed') {
@@ -263,7 +279,7 @@ class PurchaseController extends Controller
         return view('purchases.edit', compact('purchase'));
     }
 
-    public function update(Request $request, Purchase $purchase, TaxService $taxService)
+    public function update(Request $request, Purchase $purchase, TaxService $taxService, UomConversionService $uomService)
     {
         if ($purchase->status !== 'draft') {
             return redirect()->route('purchases.show', $purchase)->with('status', 'Hanya PO status draft yg bisa diedit.');
@@ -282,8 +298,8 @@ class PurchaseController extends Controller
             'purchased_uom_code.*' => ['required', 'max:50'],
             'purchased_qty' => ['required', 'array'],
             'purchased_qty.*' => ['required', 'integer', 'min:1'],
-            'qty_in_base_uom' => ['required', 'array'],
-            'qty_in_base_uom.*' => ['required', 'integer', 'min:1'],
+            'qty_in_base_uom' => ['nullable', 'array'],
+            'qty_in_base_uom.*' => ['nullable', 'integer', 'min:1'],
             'buy_price_per_purchased_uom' => ['required', 'array'],
             'buy_price_per_purchased_uom.*' => ['required', 'numeric', 'min:0'],
             'item_discount_type' => ['nullable', 'array'],
@@ -302,11 +318,26 @@ class PurchaseController extends Controller
             abort_if($mappedCount !== count(array_unique($data['product_id'])), 422, 'Ada item yang belum dimapping ke supplier ini.');
         }
 
-        DB::transaction(function () use ($purchase, $data, $taxService) {
+        DB::transaction(function () use ($purchase, $data, $taxService, $uomService) {
             $supplier = ! empty($data['supplier_id']) ? Supplier::find($data['supplier_id']) : null;
             $lineTotals = collect($data['product_id'])
                 ->map(fn ($productId, $index) => $this->calculateLineTotals($data, $index));
             $products = Product::whereIn('id', $data['product_id'])->get()->keyBy('id');
+
+            // Auto-calculate qty_in_base_uom from purchased_uom_code + purchased_qty
+            // when not provided by the client (UOM auto-conversion).
+            $baseQtys = [];
+            foreach ($data['product_id'] as $index => $productId) {
+                $manual = $data['qty_in_base_uom'][$index] ?? null;
+                $baseQtys[$index] = $manual
+                    ? (int) $manual
+                    : $uomService->convertToBaseUom(
+                        (int) $productId,
+                        $data['purchased_uom_code'][$index],
+                        (float) $data['purchased_qty'][$index],
+                    );
+            }
+
             $tax = $taxService->calculatePurchaseTax(
                 $supplier,
                 $lineTotals,
@@ -347,7 +378,7 @@ class PurchaseController extends Controller
                     'purchased_uom_code' => $data['purchased_uom_code'][$index],
                     'purchased_qty' => $data['purchased_qty'][$index],
                     'received_qty' => 0,
-                    'qty_in_base_uom' => $data['qty_in_base_uom'][$index],
+                    'qty_in_base_uom' => $baseQtys[$index],
                     'buy_price_per_purchased_uom' => $data['buy_price_per_purchased_uom'][$index],
                     'discount_type' => $lineTotals['discount_type'],
                     'discount_value' => $lineTotals['discount_value'],

@@ -37,10 +37,12 @@ Daftar pekerjaan berdasarkan audit kode vs `ARCHITECTURE_DIAGRAM.md` & `ARCHITEC
 ## 🟡 Prioritas Sedang (Fitur)
 
 ### 4. UOM Auto-Conversion Aktif
-- [ ] 4.1 Tambah method `convertToBaseUom(int $productId, string $fromUomCode, float $qty): int` di service baru `UomConversionService` atau di `InventoryService`
-- [ ] 4.2 Pakai di `PurchaseController` — input `purchased_qty` + `purchased_uom_code` → auto hitung `qty_in_base_uom` via `conversion_factor`
-- [ ] 4.3 Pakai di `PosModuleController` — tampilkan & jual dalam UOM non-base, konversi ke base saat lock stock
-- [ ] 4.4 UI: pilih UOM di PO & POS (dropdown dari `product_uom_conversions`)
+- [x] 4.1 Buat `app/Services/UomConversionService.php` — method `convertToBaseUom()` & `getAvailableUoms()`
+- [x] 4.2 Integrasi PO: `PurchaseController::store()` & `update()` auto-calculate `qty_in_base_uom` dari `purchased_uom_code` + `purchased_qty` (backward compatible — jika `qty_in_base_uom` diisi manual, pakai nilai tersebut)
+- [x] 4.3 Integrasi POS: `PosModuleController::saveDraft()` terima field optional `uom_code[]` — konversi qty ke base UOM sebelum FIFO lock (backward compatible — jika tidak dikirim, default base UOM)
+- [x] 4.4 Endpoint `GET /modules/pos/lookup-uoms/{product}` untuk UI dapatkan list UOM per product (base + conversions)
+- [ ] 4.5 UI PO: tampilkan auto-calc qty_in_base_uom saat user pilih UOM (frontend JS — pending UI update)
+- [ ] 4.6 UI POS: tambah dropdown UOM per cart line (frontend JS — pending UI update)
 
 ### 5. Modul Retur (Pembelian & Penjualan)
 - [ ] 5.1 Migration `purchase_returns` + `purchase_return_items`
@@ -95,9 +97,9 @@ Daftar pekerjaan berdasarkan audit kode vs `ARCHITECTURE_DIAGRAM.md` & `ARCHITEC
 | Kategori | Total Item | Done | Pending |
 |---|---|---|---|
 | Prioritas Tinggi | 3 (12 sub) | 12 | 0 |
-| Prioritas Sedang | 3 (20 sub) | 0 | 20 |
+| Prioritas Sedang | 3 (22 sub) | 4 | 18 |
 | Prioritas Rendah | 3 (14 sub) | 0 | 14 |
-| **Total** | **9 (46 sub)** | **12** | **34** |
+| **Total** | **9 (48 sub)** | **16** | **32** |
 
 ---
 
