@@ -106,6 +106,7 @@ Route::middleware(['auth', 'menu.permission'])->group(function () {
     Route::get('/purchases/lookup/products', [PurchaseController::class, 'lookupProducts'])->name('purchases.lookup.products');
     Route::get('/purchases/lookup/suppliers', [PurchaseController::class, 'lookupSuppliers'])->name('purchases.lookup.suppliers');
     Route::get('/purchases/products/{product}/last-price', [PurchaseController::class, 'lastPrice'])->name('purchases.products.last-price');
+    Route::get('/purchases/products/{product}/uoms', [PurchaseController::class, 'lookupUoms'])->name('purchases.products.uoms');
     Route::get('/purchases', [PurchaseController::class, 'index'])->name('purchases.index');
     Route::get('/purchases/create', [PurchaseController::class, 'create'])->name('purchases.create');
     Route::post('/purchases', [PurchaseController::class, 'store'])->name('purchases.store');

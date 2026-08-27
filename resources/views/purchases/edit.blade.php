@@ -77,9 +77,9 @@
                                 <input type="hidden" class="line-item-type" value="{{ $item->product?->item_type_code ?? '' }}">
                                 <input class="lookup-input product-label" value="{{ $item->product?->sku }} - {{ $item->product?->name }}" readonly required data-lookup-open>
                             </td>
-                            <td><input name="purchased_uom_code[]" class="line-uom" value="{{ $item->purchased_uom_code }}" required></td>
+                            <td><select name="purchased_uom_code[]" class="line-uom" required><option value="{{ $item->purchased_uom_code }}" selected>{{ $item->purchased_uom_code }}</option></select></td>
                             <td><input type="number" step="1" min="1" name="purchased_qty[]" class="line-qty" value="{{ $item->purchased_qty }}" required></td>
-                            <td><input type="number" step="1" min="1" name="qty_in_base_uom[]" class="line-base-qty" value="{{ $item->qty_in_base_uom }}" required></td>
+                            <td><input type="number" step="1" min="1" name="qty_in_base_uom[]" class="line-base-qty" value="{{ $item->qty_in_base_uom }}" readonly style="background:#f0f0f0" title="Auto-calculated from UOM conversion"></td>
                             <td><input type="number" step="0.01" min="0" name="buy_price_per_purchased_uom[]" class="line-price" value="{{ $item->buy_price_per_purchased_uom }}" required></td>
                             <td>
                                 <select name="item_discount_type[]" class="line-discount-type">
@@ -193,9 +193,9 @@
                     <input type="hidden" class="line-item-type" value="">
                     <input class="lookup-input product-label" value="Click to select product" readonly required data-lookup-open>
                 </td>
-                <td><input name="purchased_uom_code[]" class="line-uom" value="PCS" required></td>
+                <td><select name="purchased_uom_code[]" class="line-uom" required><option value="PCS">PCS</option></select></td>
                 <td><input type="number" step="1" min="1" name="purchased_qty[]" class="line-qty" value="1" required></td>
-                <td><input type="number" step="1" min="1" name="qty_in_base_uom[]" class="line-base-qty" value="1" required></td>
+                <td><input type="number" step="1" min="1" name="qty_in_base_uom[]" class="line-base-qty" value="1" readonly style="background:#f0f0f0" title="Auto-calculated from UOM conversion"></td>
                 <td><input type="number" step="0.01" min="0" name="buy_price_per_purchased_uom[]" class="line-price" value="0" required></td>
                 <td>
                     <select name="item_discount_type[]" class="line-discount-type">
@@ -317,16 +317,32 @@
             activeRow.querySelector('.product-label').value = selected.dataset.label;
             activeRow.querySelector('.product-label-hidden').value = selected.dataset.label;
             activeRow.querySelector('.line-item-type').value = selected.dataset.itemType || '';
-            activeRow.querySelector('.line-uom').value = selected.dataset.uom || 'PCS';
-            activeRow.querySelector('.line-base-qty').value = activeRow.querySelector('.line-qty').value || 1;
+
+            // Fetch available UOMs for this product and populate the dropdown
+            const uomResponse = await fetch(`{{ url('/purchases/products') }}/${selected.dataset.id}/uoms`);
+            const uomPayload = await uomResponse.json();
+            const uomSelect = activeRow.querySelector('.line-uom');
+            uomSelect.innerHTML = (uomPayload.uoms || []).map(u =>
+                `<option value="${escapeHtml(u.code)}" data-factor="${u.factor_to_base}">${escapeHtml(u.code)}</option>`
+            ).join('');
+            if (uomPayload.base_uom) uomSelect.value = uomPayload.base_uom;
+
+            updateBaseQty(activeRow);
 
             const response = await fetch(`{{ url('/purchases/products') }}/${selected.dataset.id}/last-price?supplier_id=${encodeURIComponent(supplierId.value)}`);
             const payload = await response.json();
             activeRow.querySelector('.line-price').value = payload.price || 0;
             activeRow.querySelector('.line-price-source').textContent = payload.source || 'No price';
-            if (payload.uom) activeRow.querySelector('.line-uom').value = payload.uom;
             closeLookup();
             recalc();
+        }
+
+        function updateBaseQty(row) {
+            const uomSelect = row.querySelector('.line-uom');
+            const qty = parseFloat(row.querySelector('.line-qty').value || 0);
+            const factor = parseFloat(uomSelect.selectedOptions[0]?.dataset.factor || 1);
+            const baseQty = Math.max(1, Math.round(qty * factor));
+            row.querySelector('.line-base-qty').value = baseQty;
         }
 
         addLine.addEventListener('click', () => rows.appendChild(makeRow()));
@@ -335,13 +351,16 @@
         rows.addEventListener('input', event => {
             if (event.target.matches('.line-qty')) {
                 const row = event.target.closest('tr');
-                if (row && (!row.querySelector('.line-base-qty').value || row.querySelector('.line-base-qty').value === '1')) {
-                    row.querySelector('.line-base-qty').value = event.target.value;
-                }
+                if (row) updateBaseQty(row);
             }
             if (event.target.matches('.line-qty, .line-price, .line-base-qty, .line-discount-value, .line-discount-type')) recalc();
         });
         rows.addEventListener('change', event => {
+            if (event.target.matches('.line-uom')) {
+                const row = event.target.closest('tr');
+                if (row) updateBaseQty(row);
+                recalc();
+            }
             if (event.target.matches('.line-discount-type')) recalc();
         });
         rows.addEventListener('click', event => {

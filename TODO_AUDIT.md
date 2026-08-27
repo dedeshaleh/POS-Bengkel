@@ -40,9 +40,9 @@ Daftar pekerjaan berdasarkan audit kode vs `ARCHITECTURE_DIAGRAM.md` & `ARCHITEC
 - [x] 4.1 Buat `app/Services/UomConversionService.php` — method `convertToBaseUom()` & `getAvailableUoms()`
 - [x] 4.2 Integrasi PO: `PurchaseController::store()` & `update()` auto-calculate `qty_in_base_uom` dari `purchased_uom_code` + `purchased_qty` (backward compatible — jika `qty_in_base_uom` diisi manual, pakai nilai tersebut)
 - [x] 4.3 Integrasi POS: `PosModuleController::saveDraft()` terima field optional `uom_code[]` — konversi qty ke base UOM sebelum FIFO lock (backward compatible — jika tidak dikirim, default base UOM)
-- [x] 4.4 Endpoint `GET /modules/pos/lookup-uoms/{product}` untuk UI dapatkan list UOM per product (base + conversions)
-- [ ] 4.5 UI PO: tampilkan auto-calc qty_in_base_uom saat user pilih UOM (frontend JS — pending UI update)
-- [ ] 4.6 UI POS: tambah dropdown UOM per cart line (frontend JS — pending UI update)
+- [x] 4.4 Endpoint `GET /modules/pos/lookup-uoms/{product}` + `GET /purchases/products/{product}/uoms` untuk UI dapatkan list UOM per product
+- [x] 4.5 UI PO: dropdown UOM per line (create & edit) — auto-calc `qty_in_base_uom` saat UOM/qty berubah, field read-only
+- [x] 4.6 UI POS: dropdown UOM per cart line — fetch UOMs saat product dipilih, kirim `uom_code[]` ke saveDraft
 
 ### 5. Modul Retur (Pembelian & Penjualan)
 - [x] 5.1 Migration `purchase_returns` + `purchase_return_items`
@@ -98,9 +98,9 @@ Daftar pekerjaan berdasarkan audit kode vs `ARCHITECTURE_DIAGRAM.md` & `ARCHITEC
 | Kategori | Total Item | Done | Pending |
 |---|---|---|---|
 | Prioritas Tinggi | 3 (12 sub) | 12 | 0 |
-| Prioritas Sedang | 3 (22 sub) | 18 | 4 |
+| Prioritas Sedang | 3 (22 sub) | 20 | 2 |
 | Prioritas Rendah | 3 (15 sub) | 15 | 0 |
-| **Total** | **9 (49 sub)** | **45** | **4** |
+| **Total** | **9 (49 sub)** | **47** | **2** |
 
 ---
 

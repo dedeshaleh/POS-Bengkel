@@ -530,6 +530,19 @@ class PurchaseController extends Controller
         return response()->json(['price' => (float) ($price ?? 0), 'uom' => $product->base_uom_code, 'source' => $source]);
     }
 
+    /**
+     * Return available UOM options for a product (base + conversions).
+     * Used by PO UI to render a UOM dropdown per line.
+     */
+    public function lookupUoms(Product $product, UomConversionService $uomService)
+    {
+        return response()->json([
+            'product_id' => $product->id,
+            'base_uom' => $product->base_uom_code,
+            'uoms' => $uomService->getAvailableUoms($product->id),
+        ]);
+    }
+
     private function receiveLine(InventoryService $inventory, PurchaseItem $item, int $receivedQty, float $receivedPrice, ?int $warehouseId = null, ?string $expiredDate = null): array
     {
         $factor = $item->purchased_qty > 0 ? ($item->qty_in_base_uom / $item->purchased_qty) : 1;

@@ -92,6 +92,7 @@
                 <thead>
                     <tr>
                         <th>Product</th>
+                        <th>UOM</th>
                         <th>Qty</th>
                         <th>Sell Price</th>
                         <th>Disc</th>
@@ -272,9 +273,11 @@
                 <input type="hidden" name="product_id[]" class="product-id" required>
                 <input type="hidden" name="product_label[]" class="product-label-hidden">
                 <input type="hidden" class="product-stock">
+                <input type="hidden" name="uom_code[]" class="line-uom-code" value="">
                 <input class="lookup-input product-label" value="Click to select product" readonly required data-lookup-open>
                 <small class="stock-hint muted"></small>
             </td>
+            <td><select class="line-uom-select" disabled style="min-width:70px"><option value="">—</option></select></td>
             <td><input type="number" step="1" min="1" name="qty[]" class="line-qty" value="1" required></td>
             <td><input type="number" step="0.01" min="0" name="selling_price[]" class="line-price" value="0" required></td>
             <td><input type="number" step="0.01" min="0" name="discount_amount[]" class="line-discount" value="0"></td>
@@ -429,6 +432,29 @@
         activeRow.querySelector('.product-label-hidden').value = selected.dataset.label;
         activeRow.querySelector('.product-stock').value = check.stock;
         activeRow.querySelector('.line-price').value = selected.dataset.price || 0;
+
+        // Fetch available UOMs for this product and populate the dropdown
+        try {
+            const uomRes = await fetch(`{{ route('modules.pos.lookup-uoms', ['product' => 'ID_PLACEHOLDER']) }}`.replace('ID_PLACEHOLDER', productId));
+            const uomData = await uomRes.json();
+            const uomSelect = activeRow.querySelector('.line-uom-select');
+            const uomHidden = activeRow.querySelector('.line-uom-code');
+            uomSelect.innerHTML = (uomData.uoms || []).map(u =>
+                `<option value="${escapeHtml(u.code)}" data-factor="${u.factor_to_base}">${escapeHtml(u.code)}</option>`
+            ).join('');
+            if (uomData.base_uom) {
+                uomSelect.value = uomData.base_uom;
+                uomHidden.value = uomData.base_uom;
+            }
+            uomSelect.disabled = false;
+            uomSelect.addEventListener('change', function () {
+                uomHidden.value = this.value;
+            });
+        } catch (e) {
+            // UOM lookup failed — default to base UOM from product data
+            activeRow.querySelector('.line-uom-code').value = selected.dataset.uom || 'PCS';
+        }
+
         updateStockHint(activeRow, check.stock, activeRow.querySelector('.line-qty').value);
         activeRow = null;
         closeLookup();
@@ -909,7 +935,7 @@
         headerDiscount.value = draftData.header_discount || 0;
         taxPercentage.value = draftData.tax_percentage || 0;
         // Load items
-        draftData.items.forEach(item => {
+        draftData.items.forEach(async item => {
             const tr = makeRow();
             tr.querySelector('.product-id').value = item.product_id;
             tr.querySelector('.product-label').value = item.label;
@@ -918,10 +944,30 @@
             tr.querySelector('.line-price').value = item.price;
             tr.querySelector('.line-qty').value = item.qty;
             tr.querySelector('.line-discount').value = item.discount;
+            // Fetch UOMs for this product
+            try {
+                const uomRes = await fetch(`{{ route('modules.pos.lookup-uoms', ['product' => 'ID_PLACEHOLDER']) }}`.replace('ID_PLACEHOLDER', item.product_id));
+                const uomData = await uomRes.json();
+                const uomSelect = tr.querySelector('.line-uom-select');
+                const uomHidden = tr.querySelector('.line-uom-code');
+                uomSelect.innerHTML = (uomData.uoms || []).map(u =>
+                    `<option value="${escapeHtml(u.code)}" data-factor="${u.factor_to_base}">${escapeHtml(u.code)}</option>`
+                ).join('');
+                if (uomData.base_uom) {
+                    uomSelect.value = uomData.base_uom;
+                    uomHidden.value = uomData.base_uom;
+                }
+                uomSelect.disabled = false;
+                uomSelect.addEventListener('change', function () {
+                    uomHidden.value = this.value;
+                });
+            } catch (e) {
+                tr.querySelector('.line-uom-code').value = 'PCS';
+            }
             updateStockHint(tr, item.stock, item.qty);
             rows.appendChild(tr);
+            recalc();
         });
-        recalc();
     @else
     // Start with no rows - empty cart
     recalc();
