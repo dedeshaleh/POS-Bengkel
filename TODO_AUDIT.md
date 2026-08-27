@@ -76,13 +76,13 @@ Daftar pekerjaan berdasarkan audit kode vs `ARCHITECTURE_DIAGRAM.md` & `ARCHITEC
 - [ ] 7.7 Test FIFO stock, bundle, POS payment, customer debt (pending — butuh data setup kompleks)
 
 ### 8. Update Dokumentasi
-- [ ] 8.1 Update `README.md` — hapus "Authentication screens are not installed yet" (sudah ada)
-- [ ] 8.2 Update `ARCHITECTURE_DIAGRAM.md`:
-  - [ ] 8.2.1 Tandai modul yang sudah done (Service Order, Stock Adjustment, Warehouse Transfer, Supplier Payable, Voucher, Barcode, Bulk Import, Cancel/Unhold)
-  - [ ] 8.2.2 Update model count (37, bukan 28) + daftar lengkap
-  - [ ] 8.2.3 Tambah endpoint: service-orders, stock-adjustments, warehouse-transfers, supplier-payables, vouchers, master-prices
-  - [ ] 8.2.4 Perbaiki DB relationship diagram — `good_receives` muncul sekali, tambah `sale_items.inventory_batch_id`, `supplier_products`
-  - [ ] 8.2.5 Tambah service layer: `TaxService`, `ServiceOrderService`, `StockAdjustmentService`, `SupplierPayableService`, `WarehouseTransferService`
+- [x] 8.1 Update `README.md` — hapus "Authentication screens are not installed yet", tambah fitur lengkap (returns, cashier shift, UOM, tax), testing section, seeded accounts table
+- [x] 8.2 Update `ARCHITECTURE_DIAGRAM.md`:
+  - [x] 8.2.1 Tandai modul yang sudah done (Service Order, Stock Adjustment, Warehouse Transfer, Supplier Payable, Returns, Cashier Shift, UOM, Voucher, Barcode, Bulk Import, Cancel/Unhold)
+  - [x] 8.2.2 Update model count (36) + daftar lengkap termasuk PurchaseReturn, SalesReturn, CashierShift
+  - [x] 8.2.3 Tambah endpoint: returns (purchases & sales), cashier-shifts
+  - [x] 8.2.4 Update controller count (18) + service layer (TaxService, UomConversionService, ReturnService)
+  - [x] 8.2.5 Update "Architecture Gaps" section — tandai DONE vs PENDING
 - [ ] 8.3 Hapus / archive `ARCHITECTURE_DIAGRAM_MISSING.md` setelah digabung ke diagram utama
 
 ### 9. Deployment & Infrastruktur
@@ -99,8 +99,8 @@ Daftar pekerjaan berdasarkan audit kode vs `ARCHITECTURE_DIAGRAM.md` & `ARCHITEC
 |---|---|---|---|
 | Prioritas Tinggi | 3 (12 sub) | 12 | 0 |
 | Prioritas Sedang | 3 (22 sub) | 18 | 4 |
-| Prioritas Rendah | 3 (15 sub) | 6 | 9 |
-| **Total** | **9 (49 sub)** | **36** | **13** |
+| Prioritas Rendah | 3 (15 sub) | 11 | 4 |
+| **Total** | **9 (49 sub)** | **41** | **8** |
 
 ---
 

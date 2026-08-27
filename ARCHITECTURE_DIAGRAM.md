@@ -17,8 +17,8 @@
 ├─────────────────────────────────────────────────────────────┤
 │  Laravel Framework (PHP 8.3)                                │
 │  - Routing (web.php)                                        │
-│  - Middleware (auth, guest)                                 │
-│  - Controllers (13 modules)                                 │
+│  - Middleware (auth, guest, menu.permission)                │
+│  - Controllers (18 modules)                                 │
 │  - Services (Business Logic)                                │
 │  - Models (Eloquent ORM)                                    │
 └─────────────────────────────────────────────────────────────┘
@@ -27,10 +27,12 @@
 │                    DATA LAYER                               │
 ├─────────────────────────────────────────────────────────────┤
 │  PostgreSQL Database                                        │
-│  - 20+ tables with migrations                               │
+│  - 30+ tables with migrations                               │
 │  - FIFO inventory batches                                   │
-│  - RBAC system                                              │
+│  - RBAC system (menu.permission middleware)                 │
 │  - Tax calculations (Indonesian)                           │
+│  - Returns (purchase & sales)                              │
+│  - Cashier shifts                                          │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -51,7 +53,7 @@
                                    │
                     ┌──────────────▼──────────────────────┐
                     │      CONTROLLER LAYER                │
-                    │  (13 Controllers)                    │
+                    │  (18 Controllers)                    │
                     │  - DashboardController               │
                     │  - InventoryController               │
                     │  - PurchaseController                │
@@ -63,6 +65,13 @@
                     │  - DebtController                   │
                     │  - AccessControlController           │
                     │  - AuthController                   │
+                    │  - ReturnController                 │
+                    │  - CashierShiftController            │
+                    │  - ServiceOrderController            │
+                    │  - StockAdjustmentController         │
+                    │  - WarehouseTransferController       │
+                    │  - SupplierPayableController         │
+                    │  - VoucherController                │
                     └──────────────┬──────────────────────┘
                                    │
                     ┌──────────────▼──────────────────────┐
@@ -76,11 +85,21 @@
                     │    • Price updates                  │
                     │    • Excel/CSV imports              │
                     │    • Selling price calculation      │
+                    │  - TaxService                       │
+                    │    • PPN (11% if PKP)               │
+                    │    • PPh 22/23/21                   │
+                    │    • DPP goods/services split       │
+                    │  - UomConversionService             │
+                    │    • Convert to base UOM            │
+                    │    • Direct & reverse factor        │
+                    │  - ReturnService                    │
+                    │    • Purchase return (FIFO out)     │
+                    │    • Sales return (batch restore)   │
                     └──────────────┬──────────────────────┘
                                    │
                     ┌──────────────▼──────────────────────┐
                     │        MODEL LAYER                   │
-                    │  (28 Eloquent Models)                │
+                    │  (36 Eloquent Models)                │
                     │  - Product, Category, Supplier       │
                     │  - Purchase, PurchaseItem           │
                     │  - Sale, SaleItem                   │
@@ -90,6 +109,12 @@
                     │  - MasterPrice, GlobalMaster        │
                     │  - Warehouse, WarehouseRack         │
                     │  - BundleItem, ProductUomConversion  │
+                    │  - PurchaseReturn, PurchaseReturnItem│
+                    │  - SalesReturn, SalesReturnItem     │
+                    │  - CashierShift                     │
+                    │  - ServiceOrder, StockAdjustment     │
+                    │  - WarehouseTransfer, SupplierPayable│
+                    │  - Voucher, VoucherUsage            │
                     └──────────────┬──────────────────────┘
                                    │
                     ┌──────────────▼──────────────────────┐
@@ -348,41 +373,39 @@ BengkelBerkah/
 
 ## Architecture Gaps & Future Modules
 
-The following items are currently not fully represented in the diagrams above but exist in the requirements (`database_architecture_final.md`, `AGENTS.md`) or in the codebase.
+The following items reflect the current implementation status. Items marked **DONE** are implemented; items marked **PENDING** remain.
 
-### 1. Missing Business Modules
+### 1. Business Modules
 
-- **Service / Work Order Module** — For multi-day service handling: job cards, mechanic assignment, service status, and estimated completion.
-- **Purchase & Sales Returns** — Retur pembelian ke supplier and retur penjualan dari customer.
-- **Stock Adjustment / Opname** — Manual stock correction and stock-taking flows.
-- **Warehouse Transfer Module** — Moving stock between warehouses or warehouse racks.
-- **Supplier Payable (Account Payable)** — Tracking payments and remaining debt to suppliers.
-- **Cashier Shift / Cash Drawer Management** — Open/close shifts, initial balance, and deposit tracking.
+- **Service / Work Order Module** — **DONE** — multi-day service handling, mechanic assignment, status tracking.
+- **Purchase & Sales Returns** — **DONE** — `ReturnController` + `ReturnService` handle both purchase returns (FIFO stock out) and sales returns (batch restore).
+- **Stock Adjustment / Opname** — **DONE** — manual stock correction with batch-level adjustments.
+- **Warehouse Transfer Module** — **DONE** — move stock between warehouses/racks.
+- **Supplier Payable (Account Payable)** — **DONE** — tracking payments and remaining debt to suppliers.
+- **Cashier Shift / Cash Drawer Management** — **DONE** — open/close shift, opening cash, counted closing cash, difference reconciliation.
 
-### 2. Missing Data Flows
+### 2. Data Flows
 
-- **UOM Auto-Conversion** — Converting purchase/sale quantities to base UOM (e.g., 1 Box → 10 Pcs).
-- **Voucher Application in POS** — How a voucher code reduces the sale grand total.
-- **Debt Payment Flow** — From `customer_debts` to `debt_payments`.
-- **Cancel / Unhold Transaction** — Releasing locked stock back to `inventory_batches`.
-- **Barcode/QR Generation & Print Labels** — Product label generation flow.
-- **Bulk Price Import** — CSV/Excel import through `price_import_batches` and `price_import_lines`.
+- **UOM Auto-Conversion** — **DONE** — `UomConversionService` converts purchased/sold UOM to base UOM (direct + reverse factor). PO auto-calculates `qty_in_base_uom`; POS accepts optional `uom_code[]`.
+- **Voucher Application in POS** — **DONE** — voucher code reduces sale grand total via `applyVoucher`.
+- **Debt Payment Flow** — **DONE** — `customer_debts` → `debt_payments` partial payments.
+- **Cancel / Unhold Transaction** — **DONE** — `PosModuleController::destroyDraft()` releases locked stock back to `inventory_batches`.
+- **Barcode/QR Generation & Print Labels** — **DONE** — product barcode storage + printable labels.
+- **Bulk Price Import** — **DONE** — CSV/Excel import via `price_import_batches` and `price_import_lines`.
 
-### 3. Model, Service & DB Relationship Corrections
+### 3. Service Layer
 
-- **Model Layer Completeness** — The full model list includes: `PriceImportBatch`, `PriceImportLine`, `SupplierProduct`, `Voucher`, `AppSetting`, `WarehouseRack`, and `ProductUomConversion`.
-- **Service Layer Expansion** — In addition to `InventoryService` and `PriceCatalogService`, consider `TaxService`, `PurchaseService`, `PosService`, and `StockMovementService`.
-- **DB Relationship Fixes** — `inventory_batches` links to `sale_items` via `sale_items.inventory_batch_id`; `supplier_products` links suppliers to purchasable products; `good_receives` should appear once in the relationship diagram.
+- **TaxService** — **DONE** — PPN, PPh 22/23/21, DPP split, grand total.
+- **UomConversionService** — **DONE** — convertToBaseUom, getAvailableUoms.
+- **ReturnService** — **DONE** — processPurchaseReturn, processSalesReturn.
+- **PurchaseService / PosService / StockMovementService** — **PENDING** — currently logic is inline in controllers.
 
 ### 4. Technical & Infrastructure Layers
 
-- **Deployment Architecture** — Web server/reverse proxy, queue worker, scheduler, and PostgreSQL.
-- **Queue / Background Jobs** — Laravel jobs table already exists in migrations.
-- **Caching Layer** — Laravel cache table exists in migrations.
-- **File Storage** — Exports, barcode labels, and payment receipts.
-- **Logging, Monitoring & Error Handling** — Application observability.
-- **Testing Strategy** — Unit/feature tests, factories, and seeders.
-- **Authentication Gap** — Login UI is not yet installed (`README.md` notes this as a known limitation).
+- **RBAC Middleware** — **DONE** — `EnsureMenuPermission` middleware enforces per-menu CRUD permissions.
+- **Testing** — **PARTIAL** — 18 tests pass (TaxService, UomConversionService, RBAC). FIFO/bundle/POS payment tests pending.
+- **Deployment Architecture** — **PENDING** — web server, queue worker, scheduler documentation.
+- **Authentication** — **DONE** — login UI implemented, AuthController with login/logout.
 
 ## API Endpoints Summary
 
@@ -427,3 +450,19 @@ The following items are currently not fully represented in the diagrams above bu
 - `GET /master/menus` - Menu management
 - `GET /master/roles` - Role management
 - `GET /master/prices` - Price catalog
+
+### Returns
+- `GET /returns/purchases` - Purchase return list
+- `GET /returns/purchases/create` - Create form
+- `POST /returns/purchases` - Store purchase return
+- `POST /returns/purchases/{id}/approve` - Approve (deduct stock)
+- `GET /returns/sales` - Sales return list
+- `POST /returns/sales` - Store sales return
+- `POST /returns/sales/{id}/approve` - Approve (restore stock)
+
+### Cashier Shifts
+- `GET /cashier-shifts` - Shift history
+- `GET /cashier-shifts/status` - Current shift status
+- `POST /cashier-shifts/open` - Open new shift
+- `POST /cashier-shifts/close` - Close shift with counted cash
+- `GET /cashier-shifts/{id}` - Shift detail / reconciliation
