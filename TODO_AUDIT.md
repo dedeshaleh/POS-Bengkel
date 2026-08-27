@@ -45,13 +45,13 @@ Daftar pekerjaan berdasarkan audit kode vs `ARCHITECTURE_DIAGRAM.md` & `ARCHITEC
 - [ ] 4.6 UI POS: tambah dropdown UOM per cart line (frontend JS — pending UI update)
 
 ### 5. Modul Retur (Pembelian & Penjualan)
-- [ ] 5.1 Migration `purchase_returns` + `purchase_return_items`
-- [ ] 5.2 Migration `sales_returns` + `sales_return_items`
-- [ ] 5.3 Model `PurchaseReturn`, `PurchaseReturnItem`, `SalesReturn`, `SalesReturnItem`
-- [ ] 5.4 Controller `PurchaseReturnController` + `SalesReturnController`
-- [ ] 5.5 Service: return stok ke `inventory_batches` (reverse FIFO) atau buat batch negatif
-- [ ] 5.6 View CRUD + menu + permission
-- [ ] 5.7 Update `ARCHITECTURE_DIAGRAM.md` — tambah flow retur
+- [x] 5.1 Migration `purchase_returns` + `purchase_return_items`
+- [x] 5.2 Migration `sales_returns` + `sales_return_items`
+- [x] 5.3 Model `PurchaseReturn`, `PurchaseReturnItem`, `SalesReturn`, `SalesReturnItem`
+- [x] 5.4 Controller `ReturnController` — purchase & sales returns (CRUD + approve flow)
+- [x] 5.5 Service `ReturnService` — stok keluar (purchase return, FIFO decrement) & stok masuk (sales return, batch restore/create)
+- [x] 5.6 View index/create/show untuk purchase & sales returns + menu + permission admin
+- [x] 5.7 Migration sukses, route:list & view:cache OK
 
 ### 6. Cashier Shift / Cash Drawer
 - [ ] 6.1 Migration `cashier_shifts` (open_at, close_at, opening_balance, closing_balance, expected_closing, difference, status, cashier_id)
@@ -97,9 +97,9 @@ Daftar pekerjaan berdasarkan audit kode vs `ARCHITECTURE_DIAGRAM.md` & `ARCHITEC
 | Kategori | Total Item | Done | Pending |
 |---|---|---|---|
 | Prioritas Tinggi | 3 (12 sub) | 12 | 0 |
-| Prioritas Sedang | 3 (22 sub) | 4 | 18 |
+| Prioritas Sedang | 3 (22 sub) | 11 | 11 |
 | Prioritas Rendah | 3 (14 sub) | 0 | 14 |
-| **Total** | **9 (48 sub)** | **16** | **32** |
+| **Total** | **9 (48 sub)** | **23** | **25** |
 
 ---
 

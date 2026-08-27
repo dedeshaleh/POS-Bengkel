@@ -11,6 +11,7 @@ use App\Http\Controllers\Modules\Inventory\CategoryController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ReturnController;
 use App\Http\Controllers\ServiceOrderController;
 use App\Http\Controllers\StockAdjustmentController;
 use App\Http\Controllers\SupplierController;
@@ -177,6 +178,23 @@ Route::middleware(['auth', 'menu.permission'])->group(function () {
         Route::put('/categories/{category}', [CategoryController::class, 'update'])->name('categories.update');
         Route::patch('/categories/{category}/activate', [CategoryController::class, 'activate'])->name('categories.activate');
         Route::patch('/categories/{category}/deactivate', [CategoryController::class, 'deactivate'])->name('categories.deactivate');
+    });
+
+    // Returns (Retur Pembelian & Penjualan)
+    Route::prefix('returns/purchases')->name('returns.purchases.')->group(function () {
+        Route::get('/', [ReturnController::class, 'purchaseIndex'])->name('index');
+        Route::get('/create', [ReturnController::class, 'purchaseCreate'])->name('create');
+        Route::post('/', [ReturnController::class, 'purchaseStore'])->name('store');
+        Route::get('/{purchaseReturn}', [ReturnController::class, 'purchaseShow'])->name('show');
+        Route::post('/{purchaseReturn}/approve', [ReturnController::class, 'purchaseApprove'])->name('approve');
+    });
+
+    Route::prefix('returns/sales')->name('returns.sales.')->group(function () {
+        Route::get('/', [ReturnController::class, 'salesIndex'])->name('index');
+        Route::get('/create', [ReturnController::class, 'salesCreate'])->name('create');
+        Route::post('/', [ReturnController::class, 'salesStore'])->name('store');
+        Route::get('/{salesReturn}', [ReturnController::class, 'salesShow'])->name('show');
+        Route::post('/{salesReturn}/approve', [ReturnController::class, 'salesApprove'])->name('approve');
     });
 
     Route::get('/modules/{module}/{feature?}', function (string $module, ?string $feature = null) {
