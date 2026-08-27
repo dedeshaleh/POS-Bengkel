@@ -189,6 +189,9 @@ class PosModuleController extends Controller
                         'receipt_number' => $this->nextReceiptNumber(),
                         'customer_id' => $data['customer_id'] ?? null,
                         'cashier_id' => auth()->id(),
+                        'cashier_shift_id' => \App\Models\CashierShift::where('user_id', auth()->id())
+                            ->where('status', 'open')
+                            ->value('id'),
                         'status' => 'in_progress',
                         'payment_status' => 'unpaid',
                         'subtotal_amount' => $subtotalAmount,

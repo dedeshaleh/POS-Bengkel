@@ -54,13 +54,13 @@ Daftar pekerjaan berdasarkan audit kode vs `ARCHITECTURE_DIAGRAM.md` & `ARCHITEC
 - [x] 5.7 Migration sukses, route:list & view:cache OK
 
 ### 6. Cashier Shift / Cash Drawer
-- [ ] 6.1 Migration `cashier_shifts` (open_at, close_at, opening_balance, closing_balance, expected_closing, difference, status, cashier_id)
-- [ ] 6.2 Migration `cashier_settlements` (cash, card, transfer, voucher, dll)
-- [ ] 6.3 Model `CashierShift` + `CashierSettlement`
-- [ ] 6.4 Controller `CashierShiftController` — open, close, settlement
-- [ ] 6.5 Hubungkan `sales.cashier_shift_id` (migration add column)
-- [ ] 6.6 View open-shift, close-shift, settlement
-- [ ] 6.7 Menu + permission
+- [x] 6.1 Migration `cashier_shifts` (id, user_id, shift_date, opened_at, closed_at, opening_cash, counted_closing_cash, expected_closing_cash, cash_difference, status, note)
+- [x] 6.2 Migration: tambah `cashier_shift_id` ke `sales` (nullable, backward compatible)
+- [x] 6.3 Model `CashierShift` + relasi ke `Sale` + method `expectedCash()`, `totalCashSales()`
+- [x] 6.4 Controller `CashierShiftController` — open, close, status, index, show
+- [x] 6.5 View: status (open/close form), index (history), show (reconciliation report)
+- [x] 6.6 Link `sales.cashier_shift_id` saat `PosModuleController::saveDraft()` buat sale baru
+- [x] 6.7 Tambah menu "Shift Kasir" via migration + permission admin (CRUD) & cashier (read)
 
 ---
 
@@ -97,9 +97,9 @@ Daftar pekerjaan berdasarkan audit kode vs `ARCHITECTURE_DIAGRAM.md` & `ARCHITEC
 | Kategori | Total Item | Done | Pending |
 |---|---|---|---|
 | Prioritas Tinggi | 3 (12 sub) | 12 | 0 |
-| Prioritas Sedang | 3 (22 sub) | 11 | 11 |
+| Prioritas Sedang | 3 (22 sub) | 18 | 4 |
 | Prioritas Rendah | 3 (14 sub) | 0 | 14 |
-| **Total** | **9 (48 sub)** | **23** | **25** |
+| **Total** | **9 (48 sub)** | **30** | **18** |
 
 ---
 

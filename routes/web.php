@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AccessControlController;
+use App\Http\Controllers\CashierShiftController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DebtController;
 use App\Http\Controllers\MasterDataController;
@@ -195,6 +196,15 @@ Route::middleware(['auth', 'menu.permission'])->group(function () {
         Route::post('/', [ReturnController::class, 'salesStore'])->name('store');
         Route::get('/{salesReturn}', [ReturnController::class, 'salesShow'])->name('show');
         Route::post('/{salesReturn}/approve', [ReturnController::class, 'salesApprove'])->name('approve');
+    });
+
+    // Cashier Shift / Cash Drawer
+    Route::prefix('cashier-shifts')->name('cashier-shifts.')->group(function () {
+        Route::get('/', [CashierShiftController::class, 'index'])->name('index');
+        Route::get('/status', [CashierShiftController::class, 'status'])->name('status');
+        Route::post('/open', [CashierShiftController::class, 'open'])->name('open');
+        Route::post('/close', [CashierShiftController::class, 'close'])->name('close');
+        Route::get('/{cashierShift}', [CashierShiftController::class, 'show'])->name('show');
     });
 
     Route::get('/modules/{module}/{feature?}', function (string $module, ?string $feature = null) {
