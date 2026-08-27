@@ -21,10 +21,10 @@ Daftar pekerjaan berdasarkan audit kode vs `ARCHITECTURE_DIAGRAM.md` & `ARCHITEC
 - [ ] 1.7 Tambah menu untuk modul yang belum ada menunya: service-orders, stock-adjustments, warehouse-transfers, supplier-payables (saat ini open/allow)
 
 ### 2. Verifikasi & Fix Bug Lama
-- [ ] 2.1 Cek `app/Services/PriceCatalogService.php:170` — `isDateTimeFormat()` undefined (kompatibilitas PhpSpreadsheet 5.x)
-- [ ] 2.2 Cek `resources/views/master/inventory/show.blade.php` — route `[home]` / `[inventory.index]` not defined
-- [ ] 2.3 Cek `resources/views/stock_adjustments/_form.blade.php` — `Unclosed '['` Blade syntax error
-- [ ] 2.4 Jalankan `php artisan route:list` & `php artisan view:cache` untuk verifikasi tidak ada error lain
+- [x] 2.1 Cek `app/Services/PriceCatalogService.php:170` — `isDateTimeFormat()` undefined (kompatibilitas PhpSpreadsheet 5.x) — **SUDAH FIX**: kode sekarang pakai `Date::isDateTimeFormatCode()` yang ada di PhpSpreadsheet 5.x (line 416)
+- [x] 2.2 Cek `resources/views/master/inventory/show.blade.php` — route `[home]` / `[inventory.index]` not defined — **SUDAH FIX**: sekarang pakai `route('master.inventory.index')` & `route('master.inventory.edit')`
+- [x] 2.3 Cek `resources/views/stock_adjustments/_form.blade.php` — `Unclosed '['` Blade syntax error — **SUDAH FIX**: `php artisan view:cache` berhasil tanpa error
+- [x] 2.4 Jalankan `php artisan route:list` & `php artisan view:cache` untuk verifikasi tidak ada error lain — **OK**: kedua command jalan tanpa error
 
 ### 3. Extract TaxService
 - [ ] 3.1 Buat `app/Services/TaxService.php` — pindah logic PPN/PPh/DPP split dari `PurchaseController` (line 83-102, 330-347)
@@ -94,10 +94,10 @@ Daftar pekerjaan berdasarkan audit kode vs `ARCHITECTURE_DIAGRAM.md` & `ARCHITEC
 
 | Kategori | Total Item | Done | Pending |
 |---|---|---|---|
-| Prioritas Tinggi | 3 (12 sub) | 5 | 7 |
+| Prioritas Tinggi | 3 (12 sub) | 9 | 3 |
 | Prioritas Sedang | 3 (20 sub) | 0 | 20 |
 | Prioritas Rendah | 3 (14 sub) | 0 | 14 |
-| **Total** | **9 (46 sub)** | **5** | **41** |
+| **Total** | **9 (46 sub)** | **9** | **37** |
 
 ---
 
