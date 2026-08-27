@@ -10,6 +10,7 @@ use App\Models\Supplier;
 use App\Models\Warehouse;
 use App\Services\InventoryService;
 use App\Services\PriceCatalogService;
+use App\Services\TaxService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -27,7 +28,7 @@ class PurchaseController extends Controller
         return view('purchases.create');
     }
 
-    public function store(Request $request, InventoryService $inventory)
+    public function store(Request $request, InventoryService $inventory, TaxService $taxService)
     {
         $data = $request->validate([
             'invoice_number' => ['required', 'max:100', 'unique:purchases,invoice_number'],
@@ -62,44 +63,36 @@ class PurchaseController extends Controller
             abort_if($mappedCount !== count(array_unique($data['product_id'])), 422, 'Ada item yang belum dimapping ke supplier ini.');
         }
 
-        DB::transaction(function () use ($data, $inventory) {
+        DB::transaction(function () use ($data, $inventory, $taxService) {
             $supplier = ! empty($data['supplier_id']) ? Supplier::find($data['supplier_id']) : null;
             $lineTotals = collect($data['product_id'])
                 ->map(fn ($productId, $index) => $this->calculateLineTotals($data, $index));
-            $subtotal = $lineTotals->sum('subtotal');
-            $discount = min($subtotal, (float) ($data['discount_amount'] ?? 0));
-            $taxable = max(0, $subtotal - $discount);
             $products = Product::whereIn('id', $data['product_id'])->get()->keyBy('id');
-            $goodsDppBeforeHeaderDiscount = $lineTotals->sum(function (array $line, int $index) use ($data, $products) {
-                $product = $products->get((int) $data['product_id'][$index]);
-                return strtoupper((string) $product?->item_type_code) === 'SERVICE' ? 0 : $line['subtotal'];
-            });
-            $servicesDppBeforeHeaderDiscount = $lineTotals->sum(function (array $line, int $index) use ($data, $products) {
-                $product = $products->get((int) $data['product_id'][$index]);
-                return strtoupper((string) $product?->item_type_code) === 'SERVICE' ? $line['subtotal'] : 0;
-            });
-            $goodsDpp = $subtotal > 0 ? max(0, $goodsDppBeforeHeaderDiscount - ($discount * ($goodsDppBeforeHeaderDiscount / $subtotal))) : 0;
-            $servicesDpp = $subtotal > 0 ? max(0, $servicesDppBeforeHeaderDiscount - ($discount * ($servicesDppBeforeHeaderDiscount / $subtotal))) : 0;
-            $ppnPercentage = $supplier?->is_ppn_enabled ? (float) $supplier->ppn_percentage : 0;
-            $ppnAmount = $taxable * ($ppnPercentage / 100);
-            $taxRule = $this->calculateIndonesianWithholdingTax($supplier, $goodsDpp, $servicesDpp, (bool) ($data['is_government_tax_collector'] ?? false));
+            $tax = $taxService->calculatePurchaseTax(
+                $supplier,
+                $lineTotals,
+                $products,
+                $data['product_id'],
+                (float) ($data['discount_amount'] ?? 0),
+                (bool) ($data['is_government_tax_collector'] ?? false),
+            );
 
             $purchase = Purchase::create([
                 'invoice_number' => $data['invoice_number'],
                 'supplier_id' => $data['supplier_id'] ?? null,
                 'status' => $data['status'],
                 'purchase_date' => $data['purchase_date'],
-                'total_amount' => $subtotal,
-                'discount_amount' => $discount,
-                'dpp_goods_amount' => $goodsDpp,
-                'dpp_services_amount' => $servicesDpp,
-                'ppn_percentage' => $ppnPercentage,
-                'ppn_amount' => $ppnAmount,
-                'withholding_tax_name' => $taxRule['name'],
-                'withholding_tax_percentage' => $taxRule['percentage'],
-                'withholding_tax_amount' => $taxRule['amount'],
+                'total_amount' => $tax['subtotal'],
+                'discount_amount' => $tax['discount'],
+                'dpp_goods_amount' => $tax['goods_dpp'],
+                'dpp_services_amount' => $tax['services_dpp'],
+                'ppn_percentage' => $tax['ppn_percentage'],
+                'ppn_amount' => $tax['ppn_amount'],
+                'withholding_tax_name' => $tax['withholding_tax_name'],
+                'withholding_tax_percentage' => $tax['withholding_tax_percentage'],
+                'withholding_tax_amount' => $tax['withholding_tax_amount'],
                 'is_government_tax_collector' => (bool) ($data['is_government_tax_collector'] ?? false),
-                'grand_total' => max(0, $taxable + $ppnAmount - $taxRule['amount']),
+                'grand_total' => $tax['grand_total'],
             ]);
 
             foreach ($data['product_id'] as $index => $productId) {
@@ -270,7 +263,7 @@ class PurchaseController extends Controller
         return view('purchases.edit', compact('purchase'));
     }
 
-    public function update(Request $request, Purchase $purchase)
+    public function update(Request $request, Purchase $purchase, TaxService $taxService)
     {
         if ($purchase->status !== 'draft') {
             return redirect()->route('purchases.show', $purchase)->with('status', 'Hanya PO status draft yg bisa diedit.');
@@ -309,27 +302,19 @@ class PurchaseController extends Controller
             abort_if($mappedCount !== count(array_unique($data['product_id'])), 422, 'Ada item yang belum dimapping ke supplier ini.');
         }
 
-        DB::transaction(function () use ($purchase, $data) {
+        DB::transaction(function () use ($purchase, $data, $taxService) {
             $supplier = ! empty($data['supplier_id']) ? Supplier::find($data['supplier_id']) : null;
             $lineTotals = collect($data['product_id'])
                 ->map(fn ($productId, $index) => $this->calculateLineTotals($data, $index));
-            $subtotal = $lineTotals->sum('subtotal');
-            $discount = min($subtotal, (float) ($data['discount_amount'] ?? 0));
-            $taxable = max(0, $subtotal - $discount);
             $products = Product::whereIn('id', $data['product_id'])->get()->keyBy('id');
-            $goodsDppBeforeHeaderDiscount = $lineTotals->sum(function (array $line, int $index) use ($data, $products) {
-                $product = $products->get((int) $data['product_id'][$index]);
-                return strtoupper((string) $product?->item_type_code) === 'SERVICE' ? 0 : $line['subtotal'];
-            });
-            $servicesDppBeforeHeaderDiscount = $lineTotals->sum(function (array $line, int $index) use ($data, $products) {
-                $product = $products->get((int) $data['product_id'][$index]);
-                return strtoupper((string) $product?->item_type_code) === 'SERVICE' ? $line['subtotal'] : 0;
-            });
-            $goodsDpp = $subtotal > 0 ? max(0, $goodsDppBeforeHeaderDiscount - ($discount * ($goodsDppBeforeHeaderDiscount / $subtotal))) : 0;
-            $servicesDpp = $subtotal > 0 ? max(0, $servicesDppBeforeHeaderDiscount - ($discount * ($servicesDppBeforeHeaderDiscount / $subtotal))) : 0;
-            $ppnPercentage = $supplier?->is_ppn_enabled ? (float) $supplier->ppn_percentage : 0;
-            $ppnAmount = $taxable * ($ppnPercentage / 100);
-            $taxRule = $this->calculateIndonesianWithholdingTax($supplier, $goodsDpp, $servicesDpp, (bool) ($data['is_government_tax_collector'] ?? false));
+            $tax = $taxService->calculatePurchaseTax(
+                $supplier,
+                $lineTotals,
+                $products,
+                $data['product_id'],
+                (float) ($data['discount_amount'] ?? 0),
+                (bool) ($data['is_government_tax_collector'] ?? false),
+            );
 
             // Delete old items
             $purchase->items()->delete();
@@ -340,17 +325,17 @@ class PurchaseController extends Controller
                 'supplier_id' => $data['supplier_id'] ?? null,
                 'status' => $data['status'],
                 'purchase_date' => $data['purchase_date'],
-                'total_amount' => $subtotal,
-                'discount_amount' => $discount,
-                'dpp_goods_amount' => $goodsDpp,
-                'dpp_services_amount' => $servicesDpp,
-                'ppn_percentage' => $ppnPercentage,
-                'ppn_amount' => $ppnAmount,
-                'withholding_tax_name' => $taxRule['name'],
-                'withholding_tax_percentage' => $taxRule['percentage'],
-                'withholding_tax_amount' => $taxRule['amount'],
+                'total_amount' => $tax['subtotal'],
+                'discount_amount' => $tax['discount'],
+                'dpp_goods_amount' => $tax['goods_dpp'],
+                'dpp_services_amount' => $tax['services_dpp'],
+                'ppn_percentage' => $tax['ppn_percentage'],
+                'ppn_amount' => $tax['ppn_amount'],
+                'withholding_tax_name' => $tax['withholding_tax_name'],
+                'withholding_tax_percentage' => $tax['withholding_tax_percentage'],
+                'withholding_tax_amount' => $tax['withholding_tax_amount'],
                 'is_government_tax_collector' => (bool) ($data['is_government_tax_collector'] ?? false),
-                'grand_total' => max(0, $taxable + $ppnAmount - $taxRule['amount']),
+                'grand_total' => $tax['grand_total'],
             ]);
 
             // Re-create items
@@ -543,42 +528,6 @@ class PurchaseController extends Controller
             'discount_value' => $discountValue,
             'discount_amount' => $discountAmount,
             'subtotal' => max(0, $gross - $discountAmount),
-        ];
-    }
-
-    private function calculateIndonesianWithholdingTax(?Supplier $supplier, float $goodsDpp, float $servicesDpp, bool $isGovernmentTaxCollector): array
-    {
-        $articles = [];
-        $singlePercentage = 0;
-        $amount = 0;
-
-        if ($goodsDpp > 0 && $isGovernmentTaxCollector) {
-            $articles[] = 'PPh 22 1.5%';
-            $singlePercentage = 1.5;
-            $amount += $goodsDpp * 0.015;
-        }
-
-        if ($servicesDpp > 0 && ($supplier?->entity_type ?? 'corporate') === 'corporate') {
-            $articles[] = 'PPh 23 2%';
-            $singlePercentage = 2;
-            $amount += $servicesDpp * 0.02;
-        }
-
-        if ($servicesDpp > 0 && ($supplier?->entity_type ?? 'corporate') === 'individual') {
-            $percentage = (float) ($supplier?->pph21_percentage ?? 5);
-            if (blank($supplier?->tax_id_npwp)) {
-                $percentage *= 1.2;
-            }
-
-            $articles[] = 'PPh 21 ' . rtrim(rtrim(number_format($percentage, 2, '.', ''), '0'), '.') . '%';
-            $singlePercentage = $percentage;
-            $amount += $servicesDpp * ($percentage / 100);
-        }
-
-        return [
-            'name' => empty($articles) ? null : implode(' + ', $articles),
-            'percentage' => count($articles) === 1 ? $singlePercentage : 0,
-            'amount' => $amount,
         ];
     }
 

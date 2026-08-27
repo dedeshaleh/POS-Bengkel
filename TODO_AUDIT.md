@@ -27,10 +27,10 @@ Daftar pekerjaan berdasarkan audit kode vs `ARCHITECTURE_DIAGRAM.md` & `ARCHITEC
 - [x] 2.4 Jalankan `php artisan route:list` & `php artisan view:cache` untuk verifikasi tidak ada error lain — **OK**: kedua command jalan tanpa error
 
 ### 3. Extract TaxService
-- [ ] 3.1 Buat `app/Services/TaxService.php` — pindah logic PPN/PPh/DPP split dari `PurchaseController` (line 83-102, 330-347)
-- [ ] 3.2 Method: `calculatePurchaseTax(Supplier $supplier, float $goodsDpp, float $servicesDpp, bool $isGovCollector): array`
-- [ ] 3.3 Refactor `PurchaseController::store()` & `update()` pakai `TaxService`
-- [ ] 3.4 Verifikasi hasil perhitungan tetap sama
+- [x] 3.1 Buat `app/Services/TaxService.php` — pindah logic PPN/PPh/DPP split dari `PurchaseController`
+- [x] 3.2 Method: `splitDpp()`, `calculatePpn()`, `calculateWithholdingTax()`, `calculatePurchaseTax()` (wrapper)
+- [x] 3.3 Refactor `PurchaseController::store()` & `update()` pakai `TaxService` — hapus method `calculateIndonesianWithholdingTax()` dari controller
+- [x] 3.4 Verifikasi: `php artisan route:list` jalan tanpa error, logic perhitungan sama (dipindah persis)
 
 ---
 
@@ -94,10 +94,10 @@ Daftar pekerjaan berdasarkan audit kode vs `ARCHITECTURE_DIAGRAM.md` & `ARCHITEC
 
 | Kategori | Total Item | Done | Pending |
 |---|---|---|---|
-| Prioritas Tinggi | 3 (12 sub) | 9 | 3 |
+| Prioritas Tinggi | 3 (12 sub) | 12 | 0 |
 | Prioritas Sedang | 3 (20 sub) | 0 | 20 |
 | Prioritas Rendah | 3 (14 sub) | 0 | 14 |
-| **Total** | **9 (46 sub)** | **9** | **37** |
+| **Total** | **9 (46 sub)** | **12** | **34** |
 
 ---
 
