@@ -25,7 +25,7 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 });
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'menu.permission'])->group(function () {
     Route::get('/', DashboardController::class)->name('dashboard');
     Route::get('/api/alerts', [DashboardController::class, 'alerts'])->name('api.alerts');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Middleware\EnsureMenuPermission;
 use App\Models\Menu;
 use App\Models\Role;
 use App\Models\RolePermission;
@@ -43,6 +44,7 @@ class AccessControlController extends Controller
         ]);
 
         $user->roles()->sync($data['role_ids']);
+        EnsureMenuPermission::flushPermissionCache();
 
         return back()->with('status', 'User and roles saved.');
     }
@@ -69,6 +71,7 @@ class AccessControlController extends Controller
 
         $user->update($payload);
         $user->roles()->sync($data['role_ids']);
+        EnsureMenuPermission::flushPermissionCache();
 
         return redirect()->route('master.users')->with('status', 'User updated.');
     }
@@ -137,6 +140,7 @@ class AccessControlController extends Controller
         $data['is_progress'] = $request->boolean('is_progress');
 
         Menu::create($data);
+        EnsureMenuPermission::flushPermissionCache();
 
         return redirect()->route('master.menus')->with('status', 'Menu saved.');
     }
@@ -172,6 +176,7 @@ class AccessControlController extends Controller
 
         $data['is_progress'] = $request->boolean('is_progress');
         $menu->update($data);
+        EnsureMenuPermission::flushPermissionCache();
 
         return redirect()->route('master.menus')->with('status', 'Menu updated.');
     }
@@ -185,6 +190,7 @@ class AccessControlController extends Controller
     public function destroyMenu(Menu $menu)
     {
         $menu->delete();
+        EnsureMenuPermission::flushPermissionCache();
         return redirect()->route('master.menus')->with('status', 'Menu deleted.');
     }
 
@@ -219,6 +225,7 @@ class AccessControlController extends Controller
                 'can_delete' => $request->boolean('can_delete'),
             ]
         );
+        EnsureMenuPermission::flushPermissionCache();
 
         return redirect()->route('master.menus')->with('status', 'Role access updated.');
     }
@@ -260,6 +267,7 @@ class AccessControlController extends Controller
             'can_update' => $request->boolean('can_update'),
             'can_delete' => $request->boolean('can_delete'),
         ]);
+        EnsureMenuPermission::flushPermissionCache();
 
         return redirect()->route('master.menus')->with('status', 'Role access updated.');
     }
@@ -274,6 +282,7 @@ class AccessControlController extends Controller
     public function destroyRoleAccess(RolePermission $access)
     {
         $access->delete();
+        EnsureMenuPermission::flushPermissionCache();
         return redirect()->route('master.menus')->with('status', 'Role access deleted.');
     }
 
